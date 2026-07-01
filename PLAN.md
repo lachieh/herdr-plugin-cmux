@@ -49,13 +49,20 @@ conflicts with the sections below, the addendum wins:
    terminal at spawn via `bin/attach.mjs`.)
 
 8. **Descriptions ARE live-updatable — via one undocumented path** (corrects the earlier
-   "create-only" finding). `cmux rpc workspace.action '{"workspace_id":…,"action":
-   "set_description","description":…}'` updates it in place (verified on 0.64.17);
-   `workspace rename` (CLI and rpc) silently ignores a description param. Rows now carry a
-   **live description** = the agent's newest output line (from `herdr agent read --source
-   recent-unwrapped`, filtered past TUI furniture by `lastOutputLine()`), with the identity
-   marker re-appended **verbatim** — never rebuilt, so a stale seeded terminal still trips
-   the M6 reseed. Static create-time description is just the tag; `LIVE_DESCRIPTION=true`.
+   "create-only" finding): `cmux rpc workspace.action '{"workspace_id":…,"action":
+   "set_description","description":…}'` (verified on 0.64.17; `workspace rename` silently
+   ignores a description param). A "live description = agent's newest output line" feature
+   was built on this, then **removed by request** (item 9) — the finding stays documented
+   because the rpc is the only description-write path if ever needed again.
+9. **Descriptions removed entirely; identity moved to workspace env vars** (supersedes the
+   marker scheme in item 4 and the live description in item 8). Rows are created with
+   `--env HPCX_KEY=<full key>` (+ `HPCX_TERM=<terminal>` in attach mode), read back via
+   `cmux workspace env <ws> --json`; descriptions and titles carry no plumbing at all.
+   `readMirrors()` resolves identity in three tiers: state cache (wsUuid→key; zero extra
+   calls), legacy description markers (adopted and replaced once via `reseed`, so upgrades
+   self-migrate), then one `workspace env` probe per unknown workspace with confirmed-foreign
+   ids cached in `state.foreign`. Create-output "OK workspace:N" is a stable short ref,
+   resolved to the uuid via `workspace list --id-format both` (field `ref`).
 
 ## 0.1 M6 (BUILT 2026-07-01) — attach re-seed on terminal change
 

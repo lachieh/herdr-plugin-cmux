@@ -26,8 +26,6 @@ sidebar entry. This plugin gives each agent its own row:
   agent changing state, driven by herdr's `pane.agent_status_changed` event hooks.
 - **Live task line** — the agent's current task (from its terminal title via
   `herdr agent explain`), shown while working or blocked, cleared when idle.
-- **Live description** — each row's description tracks the agent's newest output line, so
-  hovering a row shows the last thing the agent said.
 - **Click-through** — selecting a row shows the agent live in that row (`attach` mode) or
   focuses it back in herdr (`focus` mode).
 - **Optional notifications** when an agent needs input.
@@ -56,14 +54,15 @@ from live state on every pass, so correctness never depends on caches or event d
 - Agents are keyed on the stable `agent_session.source + value` (the agent's native session id,
   namespaced by source, e.g. `herdr:claude:3506f631-…`). Pane/tab/terminal ids are treated as
   volatile.
-- Each mirror row's description ends with a compact marker (`hpcx:<12-hex hash of the key>`),
-  so the session → workspace mapping is reconstructable from cmux alone. Attach rows also
-  record the terminal they were seeded against (`+<terminal_id>`); if the agent's terminal
-  moves (pane compaction, herdr daemon restart), the row is replaced automatically, and the
-  pane itself resolves the current terminal at spawn time (`bin/attach.mjs`).
-- The rest of the description is live: each pass rewrites it to the agent's newest output
-  line (via the `workspace.action set_description` rpc — the only description-update path;
-  the CLI and `workspace.rename` can't), always re-appending the identity marker verbatim.
+- Row identity lives in invisible **workspace env vars** (`HPCX_KEY`, and `HPCX_TERM` for the
+  terminal an attach row was seeded against), read back via `cmux workspace env`, so the
+  session → workspace mapping is reconstructable from cmux alone. The state file caches the
+  mapping to keep the common path at a single `workspace list` call; workspaces confirmed
+  foreign are remembered and never probed again. Titles and descriptions carry no plumbing.
+- If an agent's terminal moves (pane compaction, herdr daemon restart), the row is replaced
+  automatically, and an attach pane resolves the current terminal at spawn time
+  (`bin/attach.mjs`). Rows from older plugin versions that carried identity in the
+  description are recognized and replaced once on upgrade.
 - On any transient read failure the pass **HOLDs** (does nothing) — a blip never wipes the
   sidebar. Rows are only removed when the roster is healthy and a specific agent is gone.
 - If cmux restarts, every row is recreated from the roster on the next pass. If the user closes
@@ -144,7 +143,6 @@ override. See [`config/.env.example`](config/.env.example).
 | `GROUP_BY` | `space` | `space` = one cmux group per herdr space · `flat` = one group · `none` |
 | `CMUX_GROUP` | `herdr agents` | group name when `GROUP_BY=flat` |
 | `TASK_LINE` | `true` | live "current task" line under the status pill |
-| `LIVE_DESCRIPTION` | `true` | row description tracks the agent's newest output line |
 | `NOTIFY_ON` | `blocked` | statuses that raise a cmux notification (comma-separated) |
 | `REMOVE_ON_EXIT` | `true` | remove the row when the agent exits (`false` = gray it out) |
 | `HOLD_UNKNOWN` | `true` | keep the last real pill through a momentary `unknown` |

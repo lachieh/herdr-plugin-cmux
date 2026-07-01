@@ -10,6 +10,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { readRoster } from '../lib/herdr.mjs';
 import { loadConfig } from '../lib/config.mjs';
+import { loadState } from '../lib/state.mjs';
 import * as cmuxlib from '../lib/cmux.mjs';
 
 const cfg = loadConfig();
@@ -73,7 +74,8 @@ if (probe.ok) {
 // 4) click-through: can the bridge resolve the herdr host workspace to bounce
 //    back to after a row click?
 if (probe.ok) {
-  const host = cfg.hostWorkspace || cmuxlib.findHostWorkspace(cfg, cfg.hostTitle);
+  const mirrors = cmuxlib.readMirrors(cfg, loadState(), roster || []) || [];
+  const host = cfg.hostWorkspace || cmuxlib.findHostWorkspace(cfg, cfg.hostTitle, mirrors);
   if (host) line(`✓ click-through: herdr host workspace resolved (${host})`);
   else {
     line(`! click-through: no cmux workspace titled "${cfg.hostTitle}" — set CMUX_HOST_WORKSPACE`);

@@ -83,7 +83,7 @@ function handleEvent(line) {
     const prevIsMirror = mirrors.some((m) => m.wsUuid === prev);
     const host =
       cfg.hostWorkspace ||
-      findHostWorkspace(cfg, cfg.hostTitle) ||
+      findHostWorkspace(cfg, cfg.hostTitle, mirrors) ||
       (prevIsMirror ? null : prev);
     if (host && host !== wsUuid) selectWorkspace(cfg, host);
   } else if (/workspace\.closed/i.test(name)) {

@@ -5,8 +5,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { reconcile } from '../lib/reconcile.mjs';
-import { parseAgentList, normalizeRoster, normalizeAgent, spaceGroupName, cleanTaskEvidence, lastOutputLine } from '../lib/herdr.mjs';
-import { keyHash, marker, rowTag } from '../lib/cmux.mjs';
+import { parseAgentList, normalizeRoster, normalizeAgent, spaceGroupName, cleanTaskEvidence } from '../lib/herdr.mjs';
+import { keyHash } from '../lib/cmux.mjs';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -196,9 +196,17 @@ test('focus mode never reseeds, even on a mismatch', () => {
   assert.deepEqual(reconcile(roster, mirrors, { clickMode: 'focus' }), []);
 });
 
-test('mirror without a seeded terminal (legacy row) never reseeds', () => {
+test('mirror without a seeded terminal never reseeds on terminal change', () => {
   const roster = [agent('k1', 'idle', { terminalId: 'term_new' })];
   assert.deepEqual(reconcile(roster, [mirror('k1', 'idle')], { clickMode: 'attach' }), []);
+});
+
+test('legacy description-marker rows are replaced (reseed) in any click mode', () => {
+  const roster = [agent('k1', 'idle', { terminalId: 'term_a' })];
+  const mirrors = [{ ...mirror('k1', 'idle', 'ws-1'), legacyDesc: true }];
+  const actions = reconcile(roster, mirrors, { clickMode: 'focus' });
+  assert.deepEqual(types(actions), ['reseed']);
+  assert.equal(actions[0].wsUuid, 'ws-1');
 });
 
 test('reseed replaces the status action and still notifies on a watched transition', () => {
@@ -208,11 +216,6 @@ test('reseed replaces the status action and still notifies on a watched transiti
   assert.deepEqual(types(actions), ['reseed', 'notify']);
 });
 
-test('rowTag embeds the seeded terminal only when asked', () => {
-  const a = { agent: 'claude', cwd: '/tmp', key: 'k1', terminalId: 'term_x' };
-  assert.match(rowTag(a, true), /^hpcx:[0-9a-f]{12}\+term_x$/);
-  assert.match(rowTag(a, false), /^hpcx:[0-9a-f]{12}$/);
-});
 
 // ---------------------------------------------------------------------------
 // Task-line evidence cleaning.
@@ -237,55 +240,17 @@ test('cleanTaskEvidence collapses whitespace and truncates long lines', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Row identity marker + description.
+// Row identity hashing (legacy description-marker adoption).
 // ---------------------------------------------------------------------------
-test('marker is a compact stable hash, distinct across keys', () => {
-  assert.match(marker('herdr:claude:abc'), /^hpcx:[0-9a-f]{12}$/);
-  assert.equal(marker('herdr:claude:abc'), marker('herdr:claude:abc'));
-  assert.notEqual(marker('herdr:claude:abc'), marker('herdr:claude:abd'));
-  assert.equal(keyHash('herdr:claude:abc').length, 12);
+
+test('keyHash is a compact stable hash, distinct across keys', () => {
+  assert.match(keyHash('herdr:claude:abc'), /^[0-9a-f]{12}$/);
+  assert.equal(keyHash('herdr:claude:abc'), keyHash('herdr:claude:abc'));
+  assert.notEqual(keyHash('herdr:claude:abc'), keyHash('herdr:claude:abd'));
 });
 
-test('lastOutputLine skips TUI furniture and returns the newest content line', () => {
-  // Captured live from a real claude pane (newest last).
-  const screen = [
-    '  60 vitest + 80 bats green, tsc + lint clean. PR #2264 ready for review.',
-    '',
-    '✻ Cooked for 3m 9s',
-    '',
-    '───────────────────────────────────',
-    '❯',
-    '───────────────────────────────────',
-    '  󱑏 17:49 ~/P/t/b  main ctx 47%',
-    '  ⏵⏵ bypass permissions on (shift+tab to cycle)',
-    '',
-  ].join('\n');
-  assert.equal(
-    lastOutputLine(screen),
-    '60 vitest + 80 bats green, tsc + lint clean. PR #2264 ready for review.',
-  );
-});
 
-test('lastOutputLine skips status bars and hint lines regardless of leading glyph', () => {
-  const screen = [
-    '⏺ All 30 tests pass.',
-    ' 16:36 ~/P/lachieh/oadx feat/x Opus 4.8 (1M context) ctx 31%',
-    '✳ New task? /clear to save 292.1k tokens',
-    '  ctrl+b to run in background)',
-    '❯',
-  ].join('\n');
-  assert.equal(lastOutputLine(screen), 'All 30 tests pass.');
-});
 
-test('lastOutputLine strips output bullets, neutralizes markers, and truncates', () => {
-  assert.equal(lastOutputLine('⏺ Updated lib/cmux.mjs\n❯\n'), 'Updated lib/cmux.mjs');
-  assert.ok(!lastOutputLine('mentions hpcx:aaaabbbbcccc in output\n').includes('hpcx:'));
-  const long = lastOutputLine(`start ${'y'.repeat(200)}`);
-  assert.equal(long.length, 110);
-  assert.ok(long.endsWith('…'));
-  assert.equal(lastOutputLine(''), '');
-  assert.equal(lastOutputLine('❯\n───\n'), '');
-});
 
 test('a full reconcile against the real roster from an empty cmux → all creates', () => {
   const raw = readFileSync(join(here, 'fixtures', 'herdr-agent-list.json'), 'utf8');
