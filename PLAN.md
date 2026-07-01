@@ -48,6 +48,15 @@ conflicts with the sections below, the addendum wins:
    embedded the terminal id at create time; superseded by §0.1 — it now resolves the current
    terminal at spawn via `bin/attach.mjs`.)
 
+8. **Descriptions ARE live-updatable — via one undocumented path** (corrects the earlier
+   "create-only" finding). `cmux rpc workspace.action '{"workspace_id":…,"action":
+   "set_description","description":…}'` updates it in place (verified on 0.64.17);
+   `workspace rename` (CLI and rpc) silently ignores a description param. Rows now carry a
+   **live description** = the agent's newest output line (from `herdr agent read --source
+   recent-unwrapped`, filtered past TUI furniture by `lastOutputLine()`), with the identity
+   marker re-appended **verbatim** — never rebuilt, so a stale seeded terminal still trips
+   the M6 reseed. Static create-time description is just the tag; `LIVE_DESCRIPTION=true`.
+
 ## 0.1 M6 (BUILT 2026-07-01) — attach re-seed on terminal change
 
 **Problem.** Attach-mode mirrors bake the agent's `terminal_id` into the workspace command at

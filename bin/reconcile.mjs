@@ -9,7 +9,7 @@
 //   --dry-run   print the actions/commands that WOULD run; touch nothing
 //   --full      (accepted for parity; the pass is always a full reconcile)
 
-import { readRoster, readSpaces, spaceGroupName, readTaskLine } from '../lib/herdr.mjs';
+import { readRoster, readSpaces, spaceGroupName, readTaskLine, readLastOutput } from '../lib/herdr.mjs';
 import { reconcile } from '../lib/reconcile.mjs';
 import { loadConfig } from '../lib/config.mjs';
 import { loadState, saveState } from '../lib/state.mjs';
@@ -79,6 +79,7 @@ for (const a of actions) {
 
 ensureGroups(cfg, roster, wsByKey, state);
 ensureTasks(cfg, roster, wsByKey, state);
+ensureDescriptions(cfg, roster, wsByKey, state, mirrors);
 // Suppression only makes sense while the closed agent still lives; once it is
 // gone from the roster the entry is stale — prune so state doesn't grow forever.
 const rosterKeys = new Set(roster.map((a) => a.key));
@@ -111,6 +112,30 @@ function ensureTasks(config, agents, wsMap, st) {
       cmuxlib.clearTaskStatus(config, wsUuid);
       st.byKey[a.key] = { ...(st.byKey[a.key] || {}), wsUuid, task: '' };
     }
+  }
+}
+
+// Live description: replace the static row description with the agent's newest
+// output line, keeping the identity marker VERBATIM at the end (rebuilding it
+// would erase a stale seeded terminal and blind the M6 reseed detection).
+// Reads output for working/blocked agents, on a status transition (captures the
+// final answer when an agent settles to idle), and once per row (migration).
+function ensureDescriptions(config, agents, wsMap, st, mirrorList) {
+  if (!config.liveDescription) return;
+  const markerByKey = new Map(mirrorList.map((m) => [m.key, m.markerText]));
+  const oldStatusByKey = new Map(mirrorList.map((m) => [m.key, m.status]));
+  for (const a of agents) {
+    const wsUuid = wsMap.get(a.key);
+    const tag = markerByKey.get(a.key);
+    if (!wsUuid || !tag) continue; // row created this pass — it has its tag; next pass adds output
+    const rec = st.byKey[a.key] || {};
+    const active = a.status === 'working' || a.status === 'blocked';
+    const settled = oldStatusByKey.has(a.key) && oldStatusByKey.get(a.key) !== a.status;
+    if (!active && !settled && rec.desc) continue;
+    const line = readLastOutput(a.terminalId);
+    if (!line || line === rec.desc) continue;
+    cmuxlib.setDescription(config, wsUuid, `${line} · ${tag}`);
+    st.byKey[a.key] = { ...rec, wsUuid, desc: line };
   }
 }
 
