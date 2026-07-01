@@ -1,0 +1,17 @@
+{
+  "name": "herdr-plugin-cmux",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A herdr plugin that mirrors each herdr agent into the cmux sidebar with a live status pill, task line, and click-through.",
+  "repository": "github:lachieh/herdr-plugin-cmux",
+  "scripts": {
+    "test": "node --test",
+    "dry-run": "node bin/reconcile.mjs --dry-run",
+    "doctor": "node bin/doctor.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT"
+}

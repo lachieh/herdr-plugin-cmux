@@ -1,0 +1,43 @@
+id = "lachieh.cmux-bridge"
+name = "cmux agent sidebar bridge"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Mirror each herdr agent into the cmux sidebar with a live idle/working/blocked status pill and click-through."
+platforms = ["macos"]
+
+# --- lifecycle triggers: every hook just runs one full idempotent reconcile ---
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "bin/reconcile.mjs"]
+
+[[events]]
+on = "pane.agent_detected"
+command = ["node", "bin/reconcile.mjs"]
+
+[[events]]
+on = "pane.exited"
+command = ["node", "bin/reconcile.mjs"]
+
+[[events]]
+on = "pane.closed"
+command = ["node", "bin/reconcile.mjs"]
+
+# --- manual / keybindable actions ---
+[[actions]]
+id = "sync"
+title = "cmux bridge: sync agents to sidebar"
+command = ["node", "bin/reconcile.mjs", "--full"]
+
+[[actions]]
+id = "doctor"
+title = "cmux bridge: check setup"
+command = ["node", "bin/doctor.mjs"]
+
+# --- optional long-lived reconcile + events loop ---
+# Covers fully-idle sessions and cmux-restart-while-idle, and drives focus
+# click-through + user-close suppression via `cmux events`.
+[[panes]]
+id = "bridge"
+title = "cmux bridge (live)"
+placement = "overlay"
+command = ["node", "bin/bridge.mjs"]

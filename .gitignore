@@ -1,0 +1,9 @@
+node_modules/
+*.log
+.DS_Store
+
+# local secrets / runtime state (never commit)
+.env
+config/.env
+state/
+map.json
