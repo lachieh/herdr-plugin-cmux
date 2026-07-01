@@ -46,12 +46,15 @@ conflicts with the sections below, the addendum wins:
    directly in the row. Focus+bounce-back stays the code default; attach is set in the user's
    plugin `.env`. Verified: 8 attach panes, no phantom agents in the roster.
 
-## 0.1 M6 (planned) — attach re-seed on terminal change
+## 0.1 M6 (BUILT 2026-07-01) — attach re-seed on terminal change
 
 **Problem.** Attach-mode mirrors bake the agent's `terminal_id` into the workspace command at
 create time. `terminal_id` is volatile (pane compaction, herdr daemon restart), and a stale id
 leaves a dead or wrong attach view while the roster still lists the agent — reconcile sees no
-status diff, so today nothing heals it.
+status diff, so nothing healed it. **Status: implemented as designed below and verified live**
+(planted a row with a stale seeded terminal → one sync closed and recreated it against the
+current terminal). Both layers shipped: `bin/attach.mjs` spawn-time resolution and the
+`reseed` engine action keyed off the `hpcx:<hash>+<terminal_id>` marker.
 
 **Design (two layers, both reconcile-by-construction):**
 

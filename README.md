@@ -55,7 +55,10 @@ from live state on every pass, so correctness never depends on caches or event d
   namespaced by source, e.g. `herdr:claude:3506f631-…`). Pane/tab/terminal ids are treated as
   volatile.
 - Each mirror row's description ends with a compact marker (`hpcx:<12-hex hash of the key>`),
-  so the session → workspace mapping is reconstructable from cmux alone.
+  so the session → workspace mapping is reconstructable from cmux alone. Attach rows also
+  record the terminal they were seeded against (`+<terminal_id>`); if the agent's terminal
+  moves (pane compaction, herdr daemon restart), the row is replaced automatically, and the
+  pane itself resolves the current terminal at spawn time (`bin/attach.mjs`).
 - On any transient read failure the pass **HOLDs** (does nothing) — a blip never wipes the
   sidebar. Rows are only removed when the roster is healthy and a specific agent is gone.
 - If cmux restarts, every row is recreated from the roster on the next pass. If the user closes
@@ -180,6 +183,7 @@ node bin/doctor.mjs                # validate the full chain
 | `lib/config.mjs` · `lib/state.mjs` | config + pill table; optimization-only state cache |
 | `bin/reconcile.mjs` | driver: read → reconcile → apply (+ groups, task lines) |
 | `bin/bridge.mjs` | long-lived pane: periodic reconcile + `cmux events` tail (click-through, suppression) |
+| `bin/attach.mjs` | resolves a session key → current terminal id at pane-spawn time (attach mode) |
 | `bin/doctor.mjs` | setup validator (+ `--dock` read-only fallback) |
 
 Design history and post-build findings live in [`PLAN.md`](PLAN.md).

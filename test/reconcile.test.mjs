@@ -171,6 +171,50 @@ test('spaceGroupName uses the space label, disambiguating duplicates by number',
 });
 
 // ---------------------------------------------------------------------------
+// Attach re-seed on terminal change (M6).
+// ---------------------------------------------------------------------------
+test('attach mode + seeded-terminal mismatch → reseed carrying the create fields', () => {
+  const roster = [agent('k1', 'working', { terminalId: 'term_new', cwd: '/w' })];
+  const mirrors = [{ ...mirror('k1', 'working', 'ws-1'), attachedTerm: 'term_old' }];
+  const actions = reconcile(roster, mirrors, { clickMode: 'attach' });
+  assert.deepEqual(types(actions), ['reseed']);
+  assert.equal(actions[0].wsUuid, 'ws-1');
+  assert.equal(actions[0].terminalId, 'term_new');
+  assert.equal(actions[0].status, 'working');
+  assert.ok(actions[0].label && actions[0].cwd, 'reseed carries what create needs');
+});
+
+test('attach mode + matching terminal → no reseed', () => {
+  const roster = [agent('k1', 'idle', { terminalId: 'term_a' })];
+  const mirrors = [{ ...mirror('k1', 'idle'), attachedTerm: 'term_a' }];
+  assert.deepEqual(reconcile(roster, mirrors, { clickMode: 'attach' }), []);
+});
+
+test('focus mode never reseeds, even on a mismatch', () => {
+  const roster = [agent('k1', 'idle', { terminalId: 'term_new' })];
+  const mirrors = [{ ...mirror('k1', 'idle'), attachedTerm: 'term_old' }];
+  assert.deepEqual(reconcile(roster, mirrors, { clickMode: 'focus' }), []);
+});
+
+test('mirror without a seeded terminal (legacy row) never reseeds', () => {
+  const roster = [agent('k1', 'idle', { terminalId: 'term_new' })];
+  assert.deepEqual(reconcile(roster, [mirror('k1', 'idle')], { clickMode: 'attach' }), []);
+});
+
+test('reseed replaces the status action and still notifies on a watched transition', () => {
+  const roster = [agent('k1', 'blocked', { terminalId: 'term_new' })];
+  const mirrors = [{ ...mirror('k1', 'working', 'ws-1'), attachedTerm: 'term_old' }];
+  const actions = reconcile(roster, mirrors, { clickMode: 'attach', notifyOn: ['blocked'] });
+  assert.deepEqual(types(actions), ['reseed', 'notify']);
+});
+
+test('describeRow embeds the seeded terminal only when asked', () => {
+  const a = { agent: 'claude', cwd: '/tmp', key: 'k1', terminalId: 'term_x' };
+  assert.ok(describeRow(a, true).endsWith('+term_x'));
+  assert.ok(!describeRow(a, false).includes('+term_x'));
+});
+
+// ---------------------------------------------------------------------------
 // Task-line evidence cleaning.
 // ---------------------------------------------------------------------------
 test('cleanTaskEvidence strips spinner glyphs and leading symbols', () => {
