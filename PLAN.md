@@ -42,9 +42,11 @@ conflicts with the sections below, the addendum wins:
    sandbox can't exec `herdr` or reach `$HOME` unix sockets, and it requires a signed containing
    app. Revisit if it leaves beta and gains row injection into the native list.
 7. **CLICK_MODE=attach is what the user actually runs** (revises decision §4.2). Each mirror
-   workspace hosts `exec herdr agent attach <terminal_id>` — the agent's live view shows
-   directly in the row. Focus+bounce-back stays the code default; attach is set in the user's
-   plugin `.env`. Verified: 8 attach panes, no phantom agents in the roster.
+   workspace hosts a live `herdr agent attach` view — the agent shows directly in the row.
+   Focus+bounce-back stays the code default; attach is set in the user's plugin `.env`.
+   Verified: 8 attach panes, no phantom agents in the roster. (The attach command originally
+   embedded the terminal id at create time; superseded by §0.1 — it now resolves the current
+   terminal at spawn via `bin/attach.mjs`.)
 
 ## 0.1 M6 (BUILT 2026-07-01) — attach re-seed on terminal change
 

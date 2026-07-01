@@ -2,7 +2,7 @@ id = "lachieh.cmux-bridge"
 name = "cmux agent sidebar bridge"
 version = "0.1.0"
 min_herdr_version = "0.7.0"
-description = "Mirror each herdr agent into the cmux sidebar with a live idle/working/blocked status pill and click-through."
+description = "Mirror each herdr agent into the cmux sidebar with a live status pill, current-task line, and click-through."
 platforms = ["macos"]
 
 # --- lifecycle triggers: every hook just runs one full idempotent reconcile ---
